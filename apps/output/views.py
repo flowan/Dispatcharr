@@ -90,7 +90,8 @@ def generate_m3u(request, profile_name=None, user=None):
                 channels = Channel.objects.order_by("channel_number")
 
     # Check if the request wants to use direct logo URLs instead of cache
-    use_cached_logos = request.GET.get('cachedlogos', 'true').lower() != 'false'
+    # use_cached_logos = request.GET.get('cachedlogos', 'true').lower() != 'false'
+    use_cached_logos = False
 
     # Check if direct stream URLs should be used instead of proxy
     use_direct_urls = request.GET.get('direct', 'false').lower() == 'true'
@@ -112,7 +113,8 @@ def generate_m3u(request, profile_name=None, user=None):
         epg_url = epg_base_url
 
     # Add x-tvg-url and url-tvg attribute for EPG URL
-    m3u_content = f'#EXTM3U x-tvg-url="{epg_url}" url-tvg="{epg_url}"\n'
+    # m3u_content = f'#EXTM3U x-tvg-url="{epg_url}" url-tvg="{epg_url}"\n'
+    m3u_content = ''
 
     # Start building M3U content
     for channel in channels:
@@ -933,7 +935,7 @@ def generate_epg(request, profile_name=None, user=None):
         xml_lines = []
         xml_lines.append('<?xml version="1.0" encoding="UTF-8"?>')
         xml_lines.append(
-            '<tv generator-info-name="Dispatcharr" generator-info-url="https://github.com/Dispatcharr/Dispatcharr">'
+            '<tv generator-info-name="tv" generator-info-url="">'
         )
 
         # Get channels based on user/profile
@@ -1422,7 +1424,7 @@ def generate_epg(request, profile_name=None, user=None):
         streaming_content=epg_generator(),
         content_type="application/xml"
     )
-    response["Content-Disposition"] = 'attachment; filename="Dispatcharr.xml"'
+    response["Content-Disposition"] = 'attachment; filename="epg.xml"'
     response["Cache-Control"] = "no-cache"
     return response
 
@@ -1466,11 +1468,11 @@ def xc_get_info(request, full=False):
         "user_info": {
             "username": request.GET.get("username"),
             "password": request.GET.get("password"),
-            "message": "Dispatcharr XC API",
+            "message": "",
             "auth": 1,
             "status": "Active",
-            "exp_date": str(int(time.time()) + (90 * 24 * 60 * 60)),
-            "max_connections": str(calculate_tuner_count(minimum=1, unlimited_default=50)),
+            "exp_date": str(user.custom_properties["exp_date"] or ''),
+            "max_connections": str(user.custom_properties["max_connections"] or 1),
             "allowed_output_formats": [
                 "ts",
             ],
@@ -1507,9 +1509,8 @@ def xc_player_api(request, full=False):
     if user is None:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
 
-    server_info = xc_get_info(request)
-
     if not action:
+        server_info = xc_get_info(request)
         return JsonResponse(server_info)
 
     if action == "get_live_categories":
@@ -2250,7 +2251,7 @@ def xc_get_vod_info(request, user, vod_id):
             'description': movie_data.get('description', ''),
             'plot': movie_data.get('description', ''),
             'year': movie_data.get('year', ''),
-            'release_date': movie_data.get('release_date', ''),
+            'releasedate': movie_data.get('release_date', ''),
             'genre': movie_data.get('genre', ''),
             'director': movie_data.get('director', ''),
             'actors': movie_data.get('actors', ''),
@@ -2262,6 +2263,9 @@ def xc_get_vod_info(request, user, vod_id):
             'youtube_trailer': movie_data.get('youtube_trailer', ''),
             'backdrop_path': movie_data.get('backdrop_path', []),
             'cover': movie_data.get('cover_big', ''),
+            'duration': '',
+            'duration_secs': '',
+            'runtime': '',
             'bitrate': movie_data.get('bitrate', 0),
             'video': movie_data.get('video', {}),
             'audio': movie_data.get('audio', {}),
@@ -2351,7 +2355,6 @@ def xc_series_stream(request, username, password, stream_id, extension):
 
     return HttpResponseRedirect(vod_url)
 
-
 def get_host_and_port(request):
     """
     Returns (host, port) for building absolute URIs.
@@ -2391,6 +2394,11 @@ def get_host_and_port(request):
     # 5. Fallback to scheme default
     port = "443" if request.is_secure() else "9191"
     return host, port
+
+def build_absolute_uri(request, path):
+    host = get_host(request.get_host())
+    scheme = request.scheme
+    return f"{scheme}://{host}{path}"
 
 def build_absolute_uri_with_port(request, path):
     host, port = get_host_and_port(request)
