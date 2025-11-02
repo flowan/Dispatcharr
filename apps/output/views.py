@@ -1843,14 +1843,14 @@ def xc_get_vod_streams(request, user, category_id=None):
             "name": movie.name,
             "stream_type": "movie",
             "stream_id": movie.id,
-            "stream_icon": (
-                None if not movie.logo
-                else build_absolute_uri_with_port(
-                    request,
-                    reverse("api:channels:logo-cache", args=[movie.logo.id])
-                )
-            ),
-            #'stream_icon': movie.logo.url if movie.logo else '',
+#             "stream_icon": (
+#                 None if not movie.logo
+#                 else build_absolute_uri_with_port(
+#                     request,
+#                     reverse("api:channels:logo-cache", args=[movie.logo.id])
+#                 )
+#             ),
+            'stream_icon': (movie.custom_properties or {}).get('poster') or "",
             "rating": movie.rating or "0",
             "rating_5based": round(float(movie.rating or 0) / 2, 2) if movie.rating else 0,
             "added": str(int(movie.created_at.timestamp())),
@@ -1863,6 +1863,8 @@ def xc_get_vod_streams(request, user, category_id=None):
             "container_extension": relation.container_extension or "mp4",
             "custom_sid": None,
             "direct_source": "",
+            "duration_secs": movie.duration_secs or "",
+            "year": movie.year or "",
         })
 
     return streams

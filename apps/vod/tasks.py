@@ -335,7 +335,7 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
                 logger.warning(f"No category ID provided for movie {name}")
 
             # Extract metadata
-            year = extract_year_from_data(movie_data, 'name')
+            year = movie_data.get('year') or ''
             tmdb_id = movie_data.get('tmdb_id') or movie_data.get('tmdb')
             imdb_id = movie_data.get('imdb_id') or movie_data.get('imdb')
 
@@ -361,9 +361,8 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
             description = movie_data.get('description') or movie_data.get('plot') or ''
             rating = normalize_rating(movie_data.get('rating') or movie_data.get('vote_average'))
             genre = movie_data.get('genre') or movie_data.get('category_name') or ''
-            duration_secs = extract_duration_from_data(movie_data)
-            trailer_raw = movie_data.get('trailer') or movie_data.get('youtube_trailer') or ''
-            trailer = extract_string_from_array_or_string(trailer_raw) if trailer_raw else None
+            duration_secs = movie_data.get('duration_secs') or ''
+            trailer = movie_data.get('trailer') or movie_data.get('youtube_trailer') or ''
             logo_url = movie_data.get('stream_icon') or ''
 
             movie_props = {
@@ -375,7 +374,7 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
                 'rating': rating,
                 'genre': genre,
                 'duration_secs': duration_secs,
-                'custom_properties': {'trailer': trailer} if trailer else None,
+                'custom_properties': {'trailer': trailer, 'poster': logo_url},
             }
 
             movie_keys[movie_key] = {
@@ -390,41 +389,41 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
             logger.error(f"Error preparing movie {movie_data.get('name', 'Unknown')}: {str(e)}")
 
     # Collect all logo URLs and create logos in batch
-    logo_urls = set()
-    logo_url_to_name = {}  # Map logo URLs to movie names
-    for data in movie_keys.values():
-        logo_url = data.get('logo_url')
-        if logo_url and len(logo_url) <= 500:  # Ignore overly long URLs (likely embedded image data)
-            logo_urls.add(logo_url)
-            # Map this logo URL to the movie name (use first occurrence if multiple movies share same logo)
-            if logo_url not in logo_url_to_name:
-                movie_name = data['props'].get('name', 'Unknown Movie')
-                logo_url_to_name[logo_url] = movie_name
-
-    # Get existing logos
-    existing_logos = {
-        logo.url: logo for logo in Logo.objects.filter(url__in=logo_urls)
-    } if logo_urls else {}
-
-    # Create missing logos
-    logos_to_create = []
-    for logo_url in logo_urls:
-        if logo_url not in existing_logos:
-            movie_name = logo_url_to_name.get(logo_url, 'Unknown Movie')
-            logos_to_create.append(Logo(url=logo_url, name=movie_name))
-
-    if logos_to_create:
-        try:
-            Logo.objects.bulk_create(logos_to_create, ignore_conflicts=True)
-            # Refresh existing_logos with newly created ones
-            new_logo_urls = [logo.url for logo in logos_to_create]
-            newly_created = {
-                logo.url: logo for logo in Logo.objects.filter(url__in=new_logo_urls)
-            }
-            existing_logos.update(newly_created)
-            logger.info(f"Created {len(newly_created)} new logos for movies")
-        except Exception as e:
-            logger.warning(f"Failed to create logos: {e}")
+#     logo_urls = set()
+#     logo_url_to_name = {}  # Map logo URLs to movie names
+#     for data in movie_keys.values():
+#         logo_url = data.get('logo_url')
+#         if logo_url and len(logo_url) <= 500:  # Ignore overly long URLs (likely embedded image data)
+#             logo_urls.add(logo_url)
+#             # Map this logo URL to the movie name (use first occurrence if multiple movies share same logo)
+#             if logo_url not in logo_url_to_name:
+#                 movie_name = data['props'].get('name', 'Unknown Movie')
+#                 logo_url_to_name[logo_url] = movie_name
+#
+#     # Get existing logos
+#     existing_logos = {
+#         logo.url: logo for logo in Logo.objects.filter(url__in=logo_urls)
+#     } if logo_urls else {}
+#
+#     # Create missing logos
+#     logos_to_create = []
+#     for logo_url in logo_urls:
+#         if logo_url not in existing_logos:
+#             movie_name = logo_url_to_name.get(logo_url, 'Unknown Movie')
+#             logos_to_create.append(Logo(url=logo_url, name=movie_name))
+#
+#     if logos_to_create:
+#         try:
+#             Logo.objects.bulk_create(logos_to_create, ignore_conflicts=True)
+#             # Refresh existing_logos with newly created ones
+#             new_logo_urls = [logo.url for logo in logos_to_create]
+#             newly_created = {
+#                 logo.url: logo for logo in Logo.objects.filter(url__in=new_logo_urls)
+#             }
+#             existing_logos.update(newly_created)
+#             logger.info(f"Created {len(newly_created)} new logos for movies")
+#         except Exception as e:
+#             logger.warning(f"Failed to create logos: {e}")
 
     # Get existing movies based on our keys
     existing_movies = {}
@@ -484,15 +483,15 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
 
             # Handle logo assignment for existing movies
             logo_updated = False
-            if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
-                new_logo = existing_logos[logo_url]
-                if movie.logo != new_logo:
-                    movie._logo_to_update = new_logo
-                    logo_updated = True
-            elif (not logo_url or len(logo_url) > 500) and movie.logo:
-                # Clear logo if no logo URL provided or URL is too long
-                movie._logo_to_update = None
-                logo_updated = True
+#             if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
+#                 new_logo = existing_logos[logo_url]
+#                 if movie.logo != new_logo:
+#                     movie._logo_to_update = new_logo
+#                     logo_updated = True
+#             elif (not logo_url or len(logo_url) > 500) and movie.logo:
+#                 # Clear logo if no logo URL provided or URL is too long
+#                 movie._logo_to_update = None
+#                 logo_updated = True
 
             if updated or logo_updated:
                 movies_to_update.append(movie)
@@ -501,8 +500,8 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
             movie = Movie(**movie_props)
 
             # Assign logo if available
-            if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
-                movie.logo = existing_logos[logo_url]
+#             if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
+#                 movie.logo = existing_logos[logo_url]
 
             movies_to_create.append(movie)
 
@@ -573,10 +572,10 @@ def process_movie_batch(account, batch, categories, relations, scan_start_time=N
                 ])
 
                 # Handle logo updates separately to avoid bulk_update issues
-                for movie in movies_to_update:
-                    if hasattr(movie, '_logo_to_update'):
-                        movie.logo = movie._logo_to_update
-                        movie.save(update_fields=['logo'])
+#                 for movie in movies_to_update:
+#                     if hasattr(movie, '_logo_to_update'):
+#                         movie.logo = movie._logo_to_update
+#                         movie.save(update_fields=['logo'])
 
             # Update relations to reference the correct movie objects
             for relation in relations_to_create:
