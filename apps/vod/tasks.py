@@ -671,7 +671,7 @@ def process_series_batch(account, batch, categories, relations, scan_start_time=
             additional_metadata = {}
             for key in ['backdrop_path', 'poster_path', 'original_name', 'first_air_date', 'last_air_date',
                        'episode_run_time', 'status', 'type', 'cast', 'director', 'country', 'language',
-                       'releaseDate', 'youtube_trailer', 'category_id', 'age', 'seasons']:
+                       'releaseDate', 'youtube_trailer', 'category_id', 'age', 'seasons', 'cover']:
                 value = series_data.get(key)
                 if value:
                     # For string-like fields that might be arrays, extract clean strings
@@ -711,41 +711,41 @@ def process_series_batch(account, batch, categories, relations, scan_start_time=
             logger.error(f"Error preparing series {series_data.get('name', 'Unknown')}: {str(e)}")
 
     # Collect all logo URLs and create logos in batch
-    logo_urls = set()
-    logo_url_to_name = {}  # Map logo URLs to series names
-    for data in series_keys.values():
-        logo_url = data.get('logo_url')
-        if logo_url and len(logo_url) <= 500:  # Ignore overly long URLs (likely embedded image data)
-            logo_urls.add(logo_url)
-            # Map this logo URL to the series name (use first occurrence if multiple series share same logo)
-            if logo_url not in logo_url_to_name:
-                series_name = data['props'].get('name', 'Unknown Series')
-                logo_url_to_name[logo_url] = series_name
-
-    # Get existing logos
-    existing_logos = {
-        logo.url: logo for logo in Logo.objects.filter(url__in=logo_urls)
-    } if logo_urls else {}
-
-    # Create missing logos
-    logos_to_create = []
-    for logo_url in logo_urls:
-        if logo_url not in existing_logos:
-            series_name = logo_url_to_name.get(logo_url, 'Unknown Series')
-            logos_to_create.append(Logo(url=logo_url, name=series_name))
-
-    if logos_to_create:
-        try:
-            Logo.objects.bulk_create(logos_to_create, ignore_conflicts=True)
-            # Refresh existing_logos with newly created ones
-            new_logo_urls = [logo.url for logo in logos_to_create]
-            newly_created = {
-                logo.url: logo for logo in Logo.objects.filter(url__in=new_logo_urls)
-            }
-            existing_logos.update(newly_created)
-            logger.info(f"Created {len(newly_created)} new logos for series")
-        except Exception as e:
-            logger.warning(f"Failed to create logos: {e}")
+#     logo_urls = set()
+#     logo_url_to_name = {}  # Map logo URLs to series names
+#     for data in series_keys.values():
+#         logo_url = data.get('logo_url')
+#         if logo_url and len(logo_url) <= 500:  # Ignore overly long URLs (likely embedded image data)
+#             logo_urls.add(logo_url)
+#             # Map this logo URL to the series name (use first occurrence if multiple series share same logo)
+#             if logo_url not in logo_url_to_name:
+#                 series_name = data['props'].get('name', 'Unknown Series')
+#                 logo_url_to_name[logo_url] = series_name
+#
+#     # Get existing logos
+#     existing_logos = {
+#         logo.url: logo for logo in Logo.objects.filter(url__in=logo_urls)
+#     } if logo_urls else {}
+#
+#     # Create missing logos
+#     logos_to_create = []
+#     for logo_url in logo_urls:
+#         if logo_url not in existing_logos:
+#             series_name = logo_url_to_name.get(logo_url, 'Unknown Series')
+#             logos_to_create.append(Logo(url=logo_url, name=series_name))
+#
+#     if logos_to_create:
+#         try:
+#             Logo.objects.bulk_create(logos_to_create, ignore_conflicts=True)
+#             # Refresh existing_logos with newly created ones
+#             new_logo_urls = [logo.url for logo in logos_to_create]
+#             newly_created = {
+#                 logo.url: logo for logo in Logo.objects.filter(url__in=new_logo_urls)
+#             }
+#             existing_logos.update(newly_created)
+#             logger.info(f"Created {len(newly_created)} new logos for series")
+#         except Exception as e:
+#             logger.warning(f"Failed to create logos: {e}")
 
     # Get existing series based on our keys - same pattern as movies
     existing_series = {}
@@ -805,15 +805,15 @@ def process_series_batch(account, batch, categories, relations, scan_start_time=
 
             # Handle logo assignment for existing series
             logo_updated = False
-            if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
-                new_logo = existing_logos[logo_url]
-                if series.logo != new_logo:
-                    series._logo_to_update = new_logo
-                    logo_updated = True
-            elif (not logo_url or len(logo_url) > 500) and series.logo:
-                # Clear logo if no logo URL provided or URL is too long
-                series._logo_to_update = None
-                logo_updated = True
+#             if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
+#                 new_logo = existing_logos[logo_url]
+#                 if series.logo != new_logo:
+#                     series._logo_to_update = new_logo
+#                     logo_updated = True
+#             elif (not logo_url or len(logo_url) > 500) and series.logo:
+#                 # Clear logo if no logo URL provided or URL is too long
+#                 series._logo_to_update = None
+#                 logo_updated = True
 
             if updated or logo_updated:
                 series_to_update.append(series)
@@ -822,8 +822,8 @@ def process_series_batch(account, batch, categories, relations, scan_start_time=
             series = Series(**series_props)
 
             # Assign logo if available
-            if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
-                series.logo = existing_logos[logo_url]
+#             if logo_url and len(logo_url) <= 500 and logo_url in existing_logos:
+#                 series.logo = existing_logos[logo_url]
 
             series_to_create.append(series)
 
@@ -894,10 +894,10 @@ def process_series_batch(account, batch, categories, relations, scan_start_time=
                 ])
 
                 # Handle logo updates separately to avoid bulk_update issues
-                for series in series_to_update:
-                    if hasattr(series, '_logo_to_update'):
-                        series.logo = series._logo_to_update
-                        series.save(update_fields=['logo'])
+#                 for series in series_to_update:
+#                     if hasattr(series, '_logo_to_update'):
+#                         series.logo = series._logo_to_update
+#                         series.save(update_fields=['logo'])
 
             # Update relations to reference the correct series objects
             for relation in relations_to_create:

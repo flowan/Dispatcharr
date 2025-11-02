@@ -1915,19 +1915,20 @@ def xc_get_series(request, user, category_id=None):
             "num": relation.id,  # Use relation ID
             "name": series.name,
             "series_id": relation.id,  # Use relation ID
-            "cover": (
-                None if not series.logo
-                else build_absolute_uri_with_port(
-                    request,
-                    reverse("api:channels:logo-cache", args=[series.logo.id])
-                )
-            ),
+#             "cover": (
+#                 None if not series.logo
+#                 else build_absolute_uri_with_port(
+#                     request,
+#                     reverse("api:channels:logo-cache", args=[series.logo.id])
+#                 )
+#             ),
+            "cover": series.custom_properties.get('cover', '') if series.custom_properties else "",
             "plot": series.description or "",
             "cast": series.custom_properties.get('cast', '') if series.custom_properties else "",
             "director": series.custom_properties.get('director', '') if series.custom_properties else "",
             "genre": series.genre or "",
-            "release_date": series.custom_properties.get('release_date', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
-            "releaseDate": series.custom_properties.get('release_date', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
+            "release_date": series.custom_properties.get('releaseDate', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
+            "releaseDate": series.custom_properties.get('releaseDate', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
             "last_modified": str(int(relation.updated_at.timestamp())),
             "rating": str(series.rating or "0"),
             "rating_5based": str(round(float(series.rating or 0) / 2, 2)) if series.rating else "0",
@@ -2108,19 +2109,20 @@ def xc_get_series_info(request, user, series_id):
         'seasons': seasons_list,
         "info": {
             "name": series_data['name'],
-            "cover": (
-                None if not series.logo
-                else build_absolute_uri_with_port(
-                    request,
-                    reverse("api:channels:logo-cache", args=[series.logo.id])
-                )
-            ),
+#             "cover": (
+#                 None if not series.logo
+#                 else build_absolute_uri_with_port(
+#                     request,
+#                     reverse("api:channels:logo-cache", args=[series.logo.id])
+#                 )
+#             ),
+            "cover": series.custom_properties.get('cover', '') if series.custom_properties else "",
             "plot": series_data['description'],
             "cast": series_data['cast'],
             "director": series_data['director'],
             "genre": series_data['genre'],
-            "release_date": series.custom_properties.get('release_date', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
-            "releaseDate": series.custom_properties.get('release_date', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
+            "release_date": series.custom_properties.get('releaseDate', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
+            "releaseDate": series.custom_properties.get('releaseDate', str(series.year) if series.year else "") if series.custom_properties else (str(series.year) if series.year else ""),
             "added": str(int(series_relation.created_at.timestamp())),
             "last_modified": str(int(series_relation.updated_at.timestamp())),
             "rating": str(series_data['rating']),
@@ -2236,20 +2238,22 @@ def xc_get_vod_info(request, user, vod_id):
         "info": {
             "name": movie_data.get('name', movie.name),
             "o_name": movie_data.get('name', movie.name),
-            "cover_big": (
-                None if not movie.logo
-                else build_absolute_uri_with_port(
-                    request,
-                    reverse("api:channels:logo-cache", args=[movie.logo.id])
-                )
-            ),
-            "movie_image": (
-                None if not movie.logo
-                else build_absolute_uri_with_port(
-                    request,
-                    reverse("api:channels:logo-cache", args=[movie.logo.id])
-                )
-            ),
+            "cover_big": (movie.custom_properties or {}).get('poster') or "",
+#             "cover_big": (
+#                 None if not movie.logo
+#                 else build_absolute_uri_with_port(
+#                     request,
+#                     reverse("api:channels:logo-cache", args=[movie.logo.id])
+#                 )
+#             ),
+            "movie_image": (movie.custom_properties or {}).get('poster') or "",
+#             "movie_image": (
+#                 None if not movie.logo
+#                 else build_absolute_uri_with_port(
+#                     request,
+#                     reverse("api:channels:logo-cache", args=[movie.logo.id])
+#                 )
+#             ),
             'description': movie_data.get('description', ''),
             'plot': movie_data.get('description', ''),
             'year': movie_data.get('year', ''),
