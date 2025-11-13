@@ -970,7 +970,8 @@ def generate_epg(request, profile_name=None, user=None):
                 channels = Channel.objects.all().order_by("channel_number")
 
         # Check if the request wants to use direct logo URLs instead of cache
-        use_cached_logos = request.GET.get('cachedlogos', 'true').lower() != 'false'
+        # use_cached_logos = request.GET.get('cachedlogos', 'true').lower() != 'false'
+        use_cached_logos = False
 
         # Get the source to use for tvg-id value
         # Options: 'channel_number' (default), 'tvg_id', 'gracenote'
@@ -1470,8 +1471,9 @@ def xc_get_info(request, full=False):
             "password": request.GET.get("password"),
             "message": "",
             "auth": 1,
-            "status": "Active",
-            "exp_date": str(user.custom_properties["exp_date"] or ''),
+            "status": str(user.custom_properties.get("status") or "Active"),
+            "is_trial": str(user.custom_properties.get("is_trial") or "0"),
+            "exp_date": str(user.custom_properties["exp_date"] or ""),
             "max_connections": str(user.custom_properties["max_connections"] or 1),
             "allowed_output_formats": [
                 "ts",
@@ -1565,13 +1567,15 @@ def xc_get(request):
     if not network_access_allowed(request, 'XC_API'):
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
-    action = request.GET.get("action")
-    user = xc_get_user(request)
+    return JsonResponse([], safe=False)
 
-    if user is None:
-        return JsonResponse({'error': 'Unauthorized'}, status=401)
-
-    return generate_m3u(request, None, user)
+#     action = request.GET.get("action")
+#     user = xc_get_user(request)
+#
+#     if user is None:
+#         return JsonResponse({'error': 'Unauthorized'}, status=401)
+#
+#     return generate_m3u(request, None, user)
 
 
 def xc_xmltv(request):
@@ -1661,14 +1665,15 @@ def xc_get_live_streams(request, user, category_id=None):
                 "name": channel.name,
                 "stream_type": "live",
                 "stream_id": channel.id,
-                "stream_icon": (
-                    None
-                    if not channel.logo
-                    else build_absolute_uri_with_port(
-                        request,
-                        reverse("api:channels:logo-cache", args=[channel.logo.id])
-                    )
-                ),
+#                 "stream_icon": (
+#                     None
+#                     if not channel.logo
+#                     else build_absolute_uri_with_port(
+#                         request,
+#                         reverse("api:channels:logo-cache", args=[channel.logo.id])
+#                     )
+#                 ),
+                "stream_icon": channel.logo.url if channel.logo else "",
                 "epg_channel_id": str(int(channel.channel_number)) if channel.channel_number.is_integer() else str(channel.channel_number),
                 "added": int(channel.created_at.timestamp()),
                 "is_adult": 0,

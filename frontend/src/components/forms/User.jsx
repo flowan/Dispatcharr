@@ -38,6 +38,10 @@ const User = ({ user = null, isOpen, onClose }) => {
       password: '',
       xc_password: '',
       channel_profiles: [],
+      status: 'Active',
+      is_trial: '0',
+      exp_date: '',
+      max_connections: '1',
     },
 
     validate: (values) => ({
@@ -79,6 +83,16 @@ const User = ({ user = null, isOpen, onClose }) => {
     // Always save xc_password, even if it's empty (to allow clearing)
     customProps.xc_password = values.xc_password || '';
     delete values.xc_password;
+
+    customProps.status = values.status || 'Active';
+    customProps.is_trial = values.is_trial || '0';
+    customProps.exp_date = values.exp_date || '';
+    customProps.max_connections = values.max_connections || '1';
+
+    delete values.status;
+    delete values.is_trial;
+    delete values.exp_date;
+    delete values.max_connections;
 
     values.custom_properties = customProps;
 
@@ -125,6 +139,10 @@ const User = ({ user = null, isOpen, onClose }) => {
             ? user.channel_profiles.map((id) => `${id}`)
             : ['0'],
         xc_password: customProps.xc_password || '',
+        status: customProps.status || 'Active',
+        is_trial: customProps.is_trial || '0',
+        exp_date: customProps.exp_date || '',
+        max_connections: customProps.max_connections || '1',
       });
 
       if (customProps.xc_password) {
@@ -138,6 +156,12 @@ const User = ({ user = null, isOpen, onClose }) => {
   const generateXCPassword = () => {
     form.setValues({
       xc_password: Math.random().toString(36).slice(2),
+    });
+  };
+
+  const generateUsername = () => {
+    form.setValues({
+      username: Math.random().toString(36).slice(2),
     });
   };
 
@@ -159,6 +183,18 @@ const User = ({ user = null, isOpen, onClose }) => {
               label="Username"
               {...form.getInputProps('username')}
               key={form.key('username')}
+              style={{ flex: 1 }}
+              rightSectionWidth={30}
+              rightSection={
+                <ActionIcon
+                    variant="transparent"
+                    size="sm"
+                    color="white"
+                    onClick={generateUsername}
+                >
+                  <RotateCcwKey />
+                </ActionIcon>
+              }
             />
 
             <TextInput
@@ -242,6 +278,37 @@ const User = ({ user = null, isOpen, onClose }) => {
                 }))}
               />
             )}
+          </Stack>
+
+          <Stack gap="xs" style={{ flex: 1 }}>
+            <TextInput
+                id="status"
+                name="status"
+                label="Status"
+                {...form.getInputProps('status')}
+                key={form.key('status')}
+            />
+            <TextInput
+                id="is_trial"
+                name="is_trial"
+                label="Is Trial"
+                {...form.getInputProps('is_trial')}
+                key={form.key('is_trial')}
+            />
+            <TextInput
+                id="exp_date"
+                name="exp_date"
+                label="Expiration Date"
+                {...form.getInputProps('exp_date')}
+                key={form.key('exp_date')}
+            />
+            <TextInput
+                id="max_connections"
+                name="max_connections"
+                label="Max Connections"
+                {...form.getInputProps('max_connections')}
+                key={form.key('max_connections')}
+            />
           </Stack>
         </Group>
 

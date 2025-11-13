@@ -165,39 +165,6 @@ const UsersTable = () => {
         ),
       },
       {
-        id: 'name',
-        header: 'Name',
-        accessorFn: (row) =>
-          `${row.first_name || ''} ${row.last_name || ''}`.trim(),
-        cell: ({ getValue }) => (
-          <Box
-            style={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {getValue() || '-'}
-          </Box>
-        ),
-      },
-      {
-        header: 'Email',
-        accessorKey: 'email',
-        grow: true,
-        cell: ({ getValue }) => (
-          <Box
-            style={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {getValue()}
-          </Box>
-        ),
-      },
-      {
         header: 'Date Joined',
         accessorKey: 'date_joined',
         size: 125,
