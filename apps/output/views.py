@@ -101,7 +101,7 @@ def generate_m3u(request, profile_name=None, user=None):
     # Options: 'channel_number' (default), 'tvg_id', 'gracenote'
     tvg_id_source = request.GET.get('tvg_id_source', 'channel_number').lower()
 
-    epg_url = build_absolute_uri(request, f"?xmltv.php?username={user.username}&password={user.custom_properties.get('xc_password')}")
+    epg_url = build_absolute_uri(request, f"xmltv.php?username={user.username}&password={user.custom_properties.get('xc_password')}")
 
     # Add x-tvg-url and url-tvg attribute for EPG URL
     m3u_content = f'#EXTM3U x-tvg-url="{epg_url}" url-tvg="{epg_url}"\n'
