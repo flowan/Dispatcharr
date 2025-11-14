@@ -94,27 +94,17 @@ def generate_m3u(request, profile_name=None, user=None):
     use_cached_logos = False
 
     # Check if direct stream URLs should be used instead of proxy
-    use_direct_urls = request.GET.get('direct', 'false').lower() == 'true'
+    # use_direct_urls = request.GET.get('direct', 'false').lower() == 'true'
+    use_direct_urls = False
 
     # Get the source to use for tvg-id value
     # Options: 'channel_number' (default), 'tvg_id', 'gracenote'
     tvg_id_source = request.GET.get('tvg_id_source', 'channel_number').lower()
 
-    # Build EPG URL with query parameters if needed
-    epg_base_url = build_absolute_uri_with_port(request, reverse('output:epg_endpoint', args=[profile_name]) if profile_name else reverse('output:epg_endpoint'))
-
-    # Optionally preserve certain query parameters
-    preserved_params = ['tvg_id_source', 'cachedlogos', 'days']
-    query_params = {k: v for k, v in request.GET.items() if k in preserved_params}
-    if query_params:
-        from urllib.parse import urlencode
-        epg_url = f"{epg_base_url}?{urlencode(query_params)}"
-    else:
-        epg_url = epg_base_url
+    epg_url = build_absolute_uri(request, f"?xmltv.php?username={user.username}&password={user.custom_properties.get('xc_password')}")
 
     # Add x-tvg-url and url-tvg attribute for EPG URL
-    # m3u_content = f'#EXTM3U x-tvg-url="{epg_url}" url-tvg="{epg_url}"\n'
-    m3u_content = ''
+    m3u_content = f'#EXTM3U x-tvg-url="{epg_url}" url-tvg="{epg_url}"\n'
 
     # Start building M3U content
     for channel in channels:
@@ -142,17 +132,13 @@ def generate_m3u(request, profile_name=None, user=None):
 
         tvg_logo = ""
         if channel.logo:
-            if use_cached_logos:
-                # Use cached logo as before
-                tvg_logo = build_absolute_uri_with_port(request, reverse('api:channels:logo-cache', args=[channel.logo.id]))
+            # Try to find direct logo URL from channel's streams
+            direct_logo = channel.logo.url if channel.logo.url.startswith(('http://', 'https://')) else None
+            # If direct logo found, use it; otherwise fall back to cached version
+            if direct_logo:
+                tvg_logo = direct_logo
             else:
-                # Try to find direct logo URL from channel's streams
-                direct_logo = channel.logo.url if channel.logo.url.startswith(('http://', 'https://')) else None
-                # If direct logo found, use it; otherwise fall back to cached version
-                if direct_logo:
-                    tvg_logo = direct_logo
-                else:
-                    tvg_logo = build_absolute_uri_with_port(request, reverse('api:channels:logo-cache', args=[channel.logo.id]))
+                tvg_logo = ''
 
         # create possible gracenote id insertion
         tvc_guide_stationid = ""
@@ -166,21 +152,8 @@ def generate_m3u(request, profile_name=None, user=None):
             f'tvg-chno="{formatted_channel_number}" {tvc_guide_stationid}group-title="{group_title}",{channel.name}\n'
         )
 
-        # Determine the stream URL based on the direct parameter
-        if use_direct_urls:
-            # Try to get the first stream's direct URL
-            first_stream = channel.streams.order_by('channelstream__order').first()
-            if first_stream and first_stream.url:
-                # Use the direct stream URL
-                stream_url = first_stream.url
-            else:
-                # Fall back to proxy URL if no direct URL available
-                base_url = request.build_absolute_uri('/')[:-1]
-                stream_url = f"{base_url}/proxy/ts/stream/{channel.uuid}"
-        else:
-            # Standard behavior - use proxy URL
-            base_url = request.build_absolute_uri('/')[:-1]
-            stream_url = f"{base_url}/proxy/ts/stream/{channel.uuid}"
+        base_url = build_absolute_uri(request, '')
+        stream_url = f"{base_url}/live/{user.username}/{user.custom_properties.get('xc_password')}/{channel.id}.ts"
 
         m3u_content += extinf_line + stream_url + "\n"
 
@@ -1567,15 +1540,13 @@ def xc_get(request):
     if not network_access_allowed(request, 'XC_API'):
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
-    return JsonResponse([], safe=False)
+    action = request.GET.get("action")
+    user = xc_get_user(request)
 
-#     action = request.GET.get("action")
-#     user = xc_get_user(request)
-#
-#     if user is None:
-#         return JsonResponse({'error': 'Unauthorized'}, status=401)
-#
-#     return generate_m3u(request, None, user)
+    if user is None:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    return generate_m3u(request, None, user)
 
 
 def xc_xmltv(request):
@@ -2407,7 +2378,7 @@ def get_host_and_port(request):
     return host, port
 
 def build_absolute_uri(request, path):
-    host = get_host(request.get_host())
+    host, port = get_host_and_port(request)
     scheme = request.scheme
     return f"{scheme}://{host}{path}"
 
